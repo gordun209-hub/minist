@@ -115,7 +115,6 @@ static int xicdestroy(XIC, XPointer, XPointer);
 static void xinit(int, int);
 static void cresize(int, int);
 static void xresize(int, int);
-static void xhints(void);
 static int xloadcolor(int, const char *, Color *);
 static int xloadfont(Font *, FcPattern *);
 static void xloadfonts(const char *, double);
@@ -199,7 +198,6 @@ void zoomabs(const Arg *arg) {
   cresize(0, 0);
   // bunu silince bise deismio FIXME
   // redraw();
-  // xhints();
 }
 
 void zoomreset(const Arg *arg) {
@@ -363,51 +361,6 @@ void xclear(int x1, int y1, int x2, int y2) {
               x1, y1, x2 - x1, y2 - y1);
 }
 
-void xhints(void) {
-  XClassHint class = {opt_name ? opt_name : termname,
-                      opt_class ? opt_class : termname};
-  XWMHints wm = {.flags = InputHint, .input = 1};
-  XSizeHints *sizeh;
-
-  sizeh = XAllocSizeHints();
-
-  sizeh->flags = PSize | PResizeInc | PBaseSize | PMinSize;
-  sizeh->height = win.h;
-  sizeh->width = win.w;
-  sizeh->height_inc = win.ch;
-  sizeh->width_inc = win.cw;
-  sizeh->base_height = 2 * borderpx;
-  sizeh->base_width = 2 * borderpx;
-  sizeh->min_height = win.ch + 2 * borderpx;
-  sizeh->min_width = win.cw + 2 * borderpx;
-  if (xw.isfixed) {
-    sizeh->flags |= PMaxSize;
-    sizeh->min_width = sizeh->max_width = win.w;
-    sizeh->min_height = sizeh->max_height = win.h;
-  }
-  if (xw.gm & (XValue | YValue)) {
-    sizeh->flags |= USPosition | PWinGravity;
-    sizeh->x = xw.l;
-    sizeh->y = xw.t;
-    sizeh->win_gravity = xgeommasktogravity(xw.gm);
-  }
-
-  XSetWMProperties(xw.dpy, xw.win, NULL, NULL, NULL, 0, sizeh, &wm, &class);
-  XFree(sizeh);
-}
-
-int xgeommasktogravity(int mask) {
-  switch (mask & (XNegative | YNegative)) {
-  case 0:
-    return NorthWestGravity;
-  case XNegative:
-    return NorthEastGravity;
-  case YNegative:
-    return SouthWestGravity;
-  }
-
-  return SouthEastGravity;
-}
 
 int xloadfont(Font *f, FcPattern *pattern) {
   FcPattern *configured;
@@ -661,7 +614,6 @@ void xinit(int cols, int rows) {
 
   win.mode = MODE_NUMLOCK;
   resettitle();
-  xhints();
   XMapWindow(xw.dpy, xw.win);
   XSync(xw.dpy, False);
 }
@@ -934,7 +886,6 @@ void xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og) {
   /* remove the old cursor */
   xdrawglyph(og, ox, oy);
 
-
   /*
    * Select the right color for the right mode.
    */
@@ -954,9 +905,9 @@ void xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og) {
   /* draw the new one */
   if (IS_SET(MODE_FOCUSED)) {
     switch (win.cursor) {
-    case 0:         /* Blinking Block */
-    case 1:         /* Blinking Block (Default) */
-    case 2:         /* Steady Block */
+    case 0: /* Blinking Block */
+    case 1: /* Blinking Block (Default) */
+    case 2: /* Steady Block */
       xdrawglyph(g, cx, cy);
       break;
     }
@@ -1052,9 +1003,6 @@ void xsetmode(int set, unsigned int flags) {
     redraw();
 }
 
-
-
-
 void focus(XEvent *ev) {
   XFocusChangeEvent *e = &ev->xfocus;
 
@@ -1075,7 +1023,6 @@ void focus(XEvent *ev) {
 int match(uint mask, uint state) {
   return mask == XK_ANY_MOD || mask == (state & ~ignoremod);
 }
-
 
 void kpress(XEvent *ev) {
   XKeyEvent *e = &ev->xkey;
@@ -1190,7 +1137,7 @@ void run(void) {
 int main(int argc, char *argv[]) {
   xw.l = xw.t = 0;
   xw.isfixed = False;
-    win.cursor = 2;
+  win.cursor = 2;
 
 run:
 
