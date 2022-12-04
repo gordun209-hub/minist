@@ -41,9 +41,6 @@ static char ascii_printable[] = " !\"#$%&'()*+,-./0123456789:;<=>?"
 static void clippaste(const Arg *);
 static void numlock(const Arg *);
 static void selpaste(const Arg *);
-static void zoom(const Arg *);
-static void zoomabs(const Arg *);
-static void zoomreset(const Arg *);
 static void ttysend(const Arg *);
 /* config.h for applying patches and the configuration. */
 #include "config.h"
@@ -152,7 +149,6 @@ static void (*handler[LASTEvent])(XEvent *) = {
     [FocusOut] = focus,
     [MotionNotify] = bmotion,
     [ButtonPress] = bpress,
-    // brelease selrequest selnotify brelease propertynotifgy
 };
 /* Globals */
 static DC dc;
@@ -185,29 +181,7 @@ static uint buttons; /* bit field of pressed buttons */
 
 void numlock(const Arg *dummy) { win.mode ^= MODE_NUMLOCK; }
 
-void zoom(const Arg *arg) {
-  Arg larg;
 
-  larg.f = usedfontsize + arg->f;
-  zoomabs(&larg);
-}
-
-void zoomabs(const Arg *arg) {
-  xunloadfonts();
-  xloadfonts(usedfont, arg->f);
-  cresize(0, 0);
-  // bunu silince bise deismio FIXME
-  // redraw();
-}
-
-void zoomreset(const Arg *arg) {
-  Arg larg;
-
-  if (defaultfontsize > 0) {
-    larg.f = defaultfontsize;
-    zoomabs(&larg);
-  }
-}
 
 void ttysend(const Arg *arg) { ttywrite(arg->s, strlen(arg->s), 1); }
 
@@ -751,13 +725,6 @@ void xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len,
   XRectangle r;
 
   /* Fallback on color display for attributes not supported by the font */
-  if (base.mode & ATTR_ITALIC && base.mode & ATTR_BOLD) {
-    if (dc.ibfont.badslant || dc.ibfont.badweight)
-      base.fg = defaultattr;
-  } else if ((base.mode & ATTR_ITALIC && dc.ifont.badslant) ||
-             (base.mode & ATTR_BOLD && dc.bfont.badweight)) {
-    base.fg = defaultattr;
-  }
 
   if (IS_TRUECOL(base.fg)) {
     colfg.alpha = 0xffff;
@@ -785,50 +752,7 @@ void xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len,
   if ((base.mode & ATTR_BOLD_FAINT) == ATTR_BOLD && BETWEEN(base.fg, 0, 7))
     fg = &dc.col[base.fg + 8];
 
-  if (IS_SET(MODE_REVERSE)) {
-    if (fg == &dc.col[defaultfg]) {
-      fg = &dc.col[defaultbg];
-    } else {
-      colfg.red = ~fg->color.red;
-      colfg.green = ~fg->color.green;
-      colfg.blue = ~fg->color.blue;
-      colfg.alpha = fg->color.alpha;
-      XftColorAllocValue(xw.dpy, xw.vis, xw.cmap, &colfg, &revfg);
-      fg = &revfg;
-    }
 
-    if (bg == &dc.col[defaultbg]) {
-      bg = &dc.col[defaultfg];
-    } else {
-      colbg.red = ~bg->color.red;
-      colbg.green = ~bg->color.green;
-      colbg.blue = ~bg->color.blue;
-      colbg.alpha = bg->color.alpha;
-      XftColorAllocValue(xw.dpy, xw.vis, xw.cmap, &colbg, &revbg);
-      bg = &revbg;
-    }
-  }
-
-  if ((base.mode & ATTR_BOLD_FAINT) == ATTR_FAINT) {
-    colfg.red = fg->color.red / 2;
-    colfg.green = fg->color.green / 2;
-    colfg.blue = fg->color.blue / 2;
-    colfg.alpha = fg->color.alpha;
-    XftColorAllocValue(xw.dpy, xw.vis, xw.cmap, &colfg, &revfg);
-    fg = &revfg;
-  }
-
-  if (base.mode & ATTR_REVERSE) {
-    temp = fg;
-    fg = bg;
-    bg = temp;
-  }
-
-  if (base.mode & ATTR_BLINK && win.mode & MODE_BLINK)
-    fg = bg;
-
-  if (base.mode & ATTR_INVISIBLE)
-    fg = bg;
 
   /* Intelligent cleaning up of the borders. */
   if (x == 0) {
@@ -1053,7 +977,6 @@ void kpress(XEvent *ev) {
       len = 2;
     }
   }
-  // FIXME burada terminale yazioz
   ttywrite(buf, len, 1);
 }
 
@@ -1138,7 +1061,6 @@ int main(int argc, char *argv[]) {
   xw.l = xw.t = 0;
   xw.isfixed = False;
   win.cursor = 2;
-
 run:
 
   if (!opt_title)
